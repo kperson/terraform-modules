@@ -19,7 +19,7 @@ data "aws_iam_policy_document" "document" {
       ]
 
       resources = [
-        "${attribute.value}"
+        "${statement.value}"
       ]
     }
   }
