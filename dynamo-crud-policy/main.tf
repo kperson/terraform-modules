@@ -24,12 +24,17 @@ data "aws_iam_policy_document" "document" {
     }
   }
 
-  statement {
-    actions = [
-      "dynamodb:ListStreams",
-    ]
+  dynamic "statement" {
+    for_each = var.stream_arn == null ? [] : list(var.stream_arn)
+    content {
+      actions = [
+        "dynamodb:ListStreams"
+      ]
 
-    resources = ["*"]
+      resources = [
+        "*"
+      ]
+    }
   }
 
   statement {
