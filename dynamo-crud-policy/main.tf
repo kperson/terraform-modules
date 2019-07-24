@@ -11,16 +11,17 @@ variable "stream_arn" {
 data "aws_iam_policy_document" "document" {
   dynamic "statement" {
     for_each = var.stream_arn == null ? [] : list(var.stream_arn)
-    actions = [
-      "dynamodb:DescribeStream",
-      "dynamodb:GetRecords",
-      "dynamodb:GetShardIterator",
-    ]
+    content {
+      actions = [
+        "dynamodb:DescribeStream",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+      ]
 
-    resources = [
-      "${attribute.value}"
-    ]
-
+      resources = [
+        "${attribute.value}"
+      ]
+    }
   }
 
   statement {
