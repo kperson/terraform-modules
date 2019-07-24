@@ -53,6 +53,6 @@ resource "aws_iam_policy" "policy" {
   policy = "${data.aws_iam_policy_document.document.json}"
 }
 
-output "policy_arn" {
+output "arn" {
   value = "${aws_iam_policy.policy.arn}"
 }
