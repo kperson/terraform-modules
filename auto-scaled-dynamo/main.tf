@@ -52,9 +52,13 @@ resource "aws_dynamodb_table" "table" {
     ignore_changes = ["read_capacity", "write_capacity"]
   }
 
-  ttl {
-    attribute_name = "${var.ttl_attribute}"
-    enabled        = "${var.ttl_attribute == null ? false : true}"
+
+  dynamic "ttl" {
+    for_each = var.ttl_attribute == null ? [] : list(var.ttl_attribute)
+    content {
+      attribute_name = ttl.value.name
+      enabled = true
+    }
   }
 }
 
