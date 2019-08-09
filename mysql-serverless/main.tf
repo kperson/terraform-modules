@@ -34,6 +34,10 @@ resource "random_string" "password" {
   special = false
 }
 
+data "aws_caller_identity" "current" {}
+
+data "aws_region" "current" {}
+
 resource "aws_rds_cluster" "db" {
   master_username           = "dbuser"
   master_password           = "DEFAULT_PASSWORD"
@@ -117,6 +121,10 @@ output "database_name" {
 
 output "data_api_secret" {
   value = "/db/data_api/${var.database_name}/${random_string.password.result}"
+}
+
+output "data_api_secret_arn" {
+  value = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:/db/data_api/${var.database_name}/${random_string.password.result}"
 }
 
 output "cluster_arn" {
