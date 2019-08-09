@@ -28,15 +28,15 @@ variable "seconds_until_auto_pause" {
 }
 
 resource "random_string" "password" {
-  length  = 30
-  upper   = true
-  number  = true
-  special = true
+  length  = 10
+  upper   = false
+  number  = false
+  special = false
 }
 
 resource "aws_rds_cluster" "db" {
   master_username           = "dbuser"
-  master_password           = "${random_string.password.result}"
+  master_password           = "DEFAULT_PASSWORD"
   database_name             = "${var.database_name}"
   final_snapshot_identifier = var.final_snapshot_enabled == true ? "${replace(var.database_name, "_", "-")}-final-snapshot" : null
   skip_final_snapshot       = var.final_snapshot_enabled == false
@@ -53,27 +53,15 @@ resource "aws_rds_cluster" "db" {
     auto_pause               = true
     max_capacity             = 256
     min_capacity             = 2
-    seconds_until_auto_pause = ${var.seconds_until_auto_pause}"
+    seconds_until_auto_pause = "${var.seconds_until_auto_pause}"
     timeout_action           = "ForceApplyCapacityChange"
   }
 }
 
-resource "null_resource" "enable_http_endpoint" {
-  depends_on = ["aws_rds_cluster.db"]
-
-  provisioner "local-exec" {
-    command = "aws rds modify-db-cluster --db-cluster-identifier ${aws_rds_cluster.db.id} --apply-immediately --enable-http-endpoint"
-
-    environment = {
-    }
-  }
-}
-
-
 locals {
   data_api = {
     username            = "dbuser"
-    password            = "${random_string.password.result}"
+    password            = "MY_PASSWORD_TEMPLATE"
     engine              = "aurora" //mysql
     host                = "${aws_rds_cluster.db.endpoint}"
     port                = 3306
@@ -81,14 +69,38 @@ locals {
   }
 }
 
-resource "aws_secretsmanager_secret" "data_api" {
-  name       = "/db/data_api/${var.database_name}"
-  kms_key_id = "${var.kms_key_arn}"
+resource "null_resource" "password_credentials_file" {
+
+  provisioner "local-exec" {
+
+    command = "echo '${jsonencode(local.data_api)}' > credentials.json"
+
+    environment = {
+    }
+  }
 }
 
-resource "aws_secretsmanager_secret_version" "data_api" {
-  secret_id     = "${aws_secretsmanager_secret.data_api.id}"
-  secret_string = "${jsonencode(local.data_api)}"
+resource "null_resource" "change_password" {
+  depends_on = ["null_resource.password_credentials_file"]
+
+  provisioner "local-exec" {
+
+    command = "${path.module}/setup-password.sh credentials.json /db/data_api/${var.database_name}/${random_string.password.result} ${var.kms_key_arn} ${aws_rds_cluster.db.id} && rm credentials.json"
+
+    environment = {
+    }
+  }
+}
+
+resource "null_resource" "enable_http_endpoint" {
+  depends_on = ["null_resource.change_password"]
+
+  provisioner "local-exec" {
+    command = "aws rds modify-db-cluster --db-cluster-identifier ${aws_rds_cluster.db.id} --apply-immediately --enable-http-endpoint"
+
+    environment = {
+    }
+  }
 }
 
 output "endpoint" {
@@ -103,12 +115,8 @@ output "database_name" {
   value = "${var.database_name}"
 }
 
-output "data_api_secret_arn" {
-  value = "${aws_secretsmanager_secret.data_api.arn}"
-}
-
-output "data_api_secret_id" {
-  value = "${aws_secretsmanager_secret.data_api.id}"
+output "data_api_secret" {
+  value = "/db/data_api/${var.database_name}/${random_string.password.result}"
 }
 
 output "cluster_arn" {
