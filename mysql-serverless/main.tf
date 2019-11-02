@@ -37,15 +37,15 @@ resource "random_string" "entropy" {
 resource "aws_rds_cluster" "db" {
   master_username           = "dbuser"
   master_password           = "DEFAULT_PASSWORD"
-  database_name             = "${var.database_name}"
+  database_name             = var.database_name
   final_snapshot_identifier = var.final_snapshot_enabled == true ? "${replace(var.database_name, "_", "-")}-final-snapshot-${random_string.entropy.result}" : null
   skip_final_snapshot       = var.final_snapshot_enabled == false
   deletion_protection       = false
   backup_retention_period   = var.final_snapshot_enabled == true ? 5 : 1
-  db_subnet_group_name      = "${var.db_subnet_group_name}"
-  kms_key_id                = "${var.kms_key_arn}"
+  db_subnet_group_name      = var.db_subnet_group_name
+  kms_key_id                = var.kms_key_arn
   storage_encrypted         = true
-  vpc_security_group_ids    = "${var.vpc_security_group_ids}"
+  vpc_security_group_ids    = var.vpc_security_group_ids
   engine                    = "aurora"
   engine_mode               = "serverless"
 
@@ -53,7 +53,7 @@ resource "aws_rds_cluster" "db" {
     auto_pause               = true
     max_capacity             = 256
     min_capacity             = 2
-    seconds_until_auto_pause = "${var.seconds_until_auto_pause}"
+    seconds_until_auto_pause = var.seconds_until_auto_pause
     timeout_action           = "ForceApplyCapacityChange"
   }
 }
@@ -63,9 +63,9 @@ locals {
     username            = "dbuser"
     password            = "MY_PASSWORD_TEMPLATE"
     engine              = "aurora" //mysql
-    host                = "${aws_rds_cluster.db.endpoint}"
+    host                = aws_rds_cluster.db.endpoint
     port                = 3306
-    dbClusterIdentifier = "${aws_rds_cluster.db.cluster_identifier}"
+    dbClusterIdentifier = aws_rds_cluster.db.cluster_identifier
   }
 }
 
@@ -73,8 +73,7 @@ resource "null_resource" "generate_password" {
 
   provisioner "local-exec" {
 
-    command = "echo '${jsonencode(local.data_api)}' > credentials.json"
-
+    command = format("echo '%s' > credentials.json", jsonencode(local.data_api))
     environment = {
     }
   }
@@ -85,23 +84,22 @@ resource "null_resource" "change_password_enable_http_data_api" {
 
   provisioner "local-exec" {
 
-    command = "${path.module}/setup-password.sh credentials.json /db/data_api/${var.database_name}-${random_string.entropy.result} ${var.kms_key_arn} ${aws_rds_cluster.db.id} && rm credentials.json"
-
+    command = format("%s/setup-password.sh credentials.json /db/data_api/%s-%s %s %s && rm credentials.json", path.module, var.database_name, random_string.entropy.result, var.kms_key_arn, aws_rds_cluster.db.id)
     environment = {
     }
   }
 }
 
 output "endpoint" {
-  value = "${aws_rds_cluster.db.endpoint}"
+  value = aws_rds_cluster.db.endpoint
 }
 
 output "reader_endpoint" {
-  value = "${aws_rds_cluster.db.reader_endpoint}"
+  value = aws_rds_cluster.db.reader_endpoint
 }
 
 output "database_name" {
-  value = "${var.database_name}"
+  value = var.database_name
 }
 
 data "aws_secretsmanager_secret" "data_api" {
@@ -113,9 +111,9 @@ output "data_api_secret_name" {
 }
 
 output "data_api_secret_arn" {
-  value = "${data.aws_secretsmanager_secret.data_api.arn}"
+  value = data.aws_secretsmanager_secret.data_api.arn
 }
 
 output "cluster_arn" {
-  value = "${aws_rds_cluster.db.arn}"
+  value = aws_rds_cluster.db.arn
 }

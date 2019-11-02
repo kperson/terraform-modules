@@ -19,7 +19,7 @@ data "aws_iam_policy_document" "document" {
       ]
 
       resources = [
-        "${statement.value}"
+        statement.value
       ]
     }
   }
@@ -50,15 +50,15 @@ data "aws_iam_policy_document" "document" {
     ]
 
     resources = [
-      "${var.table_arn}"
+      var.table_arn
     ]
   }
 }
 
 resource "aws_iam_policy" "policy" {
-  policy = "${data.aws_iam_policy_document.document.json}"
+  policy = data.aws_iam_policy_document.document.json
 }
 
 output "arn" {
-  value = "${aws_iam_policy.policy.arn}"
+  value = aws_iam_policy.policy.arn
 }

@@ -61,7 +61,7 @@ resource "aws_api_gateway_integration" "api" {
   http_method             = aws_api_gateway_method.api.http_method
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = "arn:aws:apigateway:${data.aws_region.current.name}:lambda:path/2015-03-31/functions/${var.lambda_arn}/invocations"
+  uri                     = format("arn:aws:apigateway:%s:lambda:path/2015-03-31/functions/%s/invocations", data.aws_region.current.name, var.lambda_arn)
 }
 
 resource "aws_lambda_permission" "api" {
@@ -69,8 +69,9 @@ resource "aws_lambda_permission" "api" {
   action        = "lambda:InvokeFunction"
   function_name = var.lambda_arn
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "arn:aws:execute-api:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:${var.api_id}/*/*/*"
+  source_arn    = format("arn:aws:execute-api:%s:%s:%s/*/*/*", data.aws_region.current.name, data.aws_caller_identity.current.account_id, var.api_id)
 }
+
 
 resource "aws_api_gateway_deployment" "api" {
   depends_on  = ["aws_api_gateway_integration.api"]

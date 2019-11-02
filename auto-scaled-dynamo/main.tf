@@ -27,11 +27,11 @@ variable "max_capacity" {
 }
 
 resource "aws_dynamodb_table" "table" {
-  name           = "${var.table_name}"
+  name           = var.table_name
   read_capacity  = 2
   write_capacity = 2
-  hash_key       = "${var.hash_key}"
-  range_key      = "${var.range_key}"
+  hash_key       = var.hash_key
+  range_key      = var.range_key
 
   dynamic "attribute" {
     for_each = var.attributes
@@ -45,8 +45,8 @@ resource "aws_dynamodb_table" "table" {
     enabled = true
   }
 
-  stream_enabled   = "${var.stream_view_type == null ? false : true}"
-  stream_view_type = "${var.stream_view_type}"
+  stream_enabled   = var.stream_view_type == null ? false : true
+  stream_view_type = var.stream_view_type
 
   lifecycle {
     ignore_changes = ["read_capacity", "write_capacity"]
@@ -70,7 +70,7 @@ data "aws_iam_policy_document" "scale_policy_doc" {
     ]
 
     resources = [
-      "${aws_dynamodb_table.table.arn}",
+      aws_dynamodb_table.table.arn,
     ]
   }
 
@@ -90,15 +90,15 @@ data "aws_iam_policy_document" "scale_policy_doc" {
 }
 
 resource "aws_appautoscaling_target" "read_target" {
-  max_capacity       = "${var.max_capacity}"
+  max_capacity       = var.max_capacity
   min_capacity       = 2
-  resource_id        = "table/${aws_dynamodb_table.table.id}"
+  resource_id        = format("table/%s", aws_dynamodb_table.table.id)
   scalable_dimension = "dynamodb:table:ReadCapacityUnits"
   service_namespace  = "dynamodb"
 }
 
 resource "aws_appautoscaling_policy" "ready_polciy" {
-  name               = "DynamoDBReadCapacityUtilization:${aws_appautoscaling_target.read_target.resource_id}"
+  name               = format("DynamoDBReadCapacityUtilization:%s", aws_appautoscaling_target.read_target.resource_id)
   policy_type        = "TargetTrackingScaling"
   resource_id        = "${aws_appautoscaling_target.read_target.resource_id}"
   scalable_dimension = "${aws_appautoscaling_target.read_target.scalable_dimension}"
@@ -116,19 +116,19 @@ resource "aws_appautoscaling_policy" "ready_polciy" {
 }
 
 resource "aws_appautoscaling_target" "write_target" {
-  max_capacity       = "${var.max_capacity}"
+  max_capacity       = var.max_capacity
   min_capacity       = 2
-  resource_id        = "table/${aws_dynamodb_table.table.id}"
+  resource_id        = format("table/%s", aws_dynamodb_table.table.id)
   scalable_dimension = "dynamodb:table:WriteCapacityUnits"
   service_namespace  = "dynamodb"
 }
 
 resource "aws_appautoscaling_policy" "write_policy" {
-  name               = "DynamoDBWriteCapacityUtilization:${aws_appautoscaling_target.write_target.resource_id}"
+  name               = format("DynamoDBWriteCapacityUtilization:%s", aws_appautoscaling_target.write_target.resource_id)
   policy_type        = "TargetTrackingScaling"
-  resource_id        = "${aws_appautoscaling_target.write_target.resource_id}"
-  scalable_dimension = "${aws_appautoscaling_target.write_target.scalable_dimension}"
-  service_namespace  = "${aws_appautoscaling_target.write_target.service_namespace}"
+  resource_id        = aws_appautoscaling_target.write_target.resource_id
+  scalable_dimension = aws_appautoscaling_target.write_target.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.write_target.service_namespace
 
   target_tracking_scaling_policy_configuration {
     predefined_metric_specification {
@@ -142,13 +142,13 @@ resource "aws_appautoscaling_policy" "write_policy" {
 }
 
 output "id" {
-  value = "${aws_dynamodb_table.table.id}"
+  value = aws_dynamodb_table.table.id
 }
 
 output "arn" {
-  value = "${aws_dynamodb_table.table.arn}"
+  value = aws_dynamodb_table.table.arn
 }
 
 output "stream_arn" {
-  value = "${aws_dynamodb_table.table.stream_arn}"
+  value = aws_dynamodb_table.table.stream_arn
 }
