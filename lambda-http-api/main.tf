@@ -84,10 +84,9 @@ data "template_file" "stage" {
   depends_on = [
     aws_api_gateway_deployment.api
   ]
-  template = "$${stage}"
+  template = var.stage_name
 
   vars = {
-    stage = var.stage_name
   }
 }
 
