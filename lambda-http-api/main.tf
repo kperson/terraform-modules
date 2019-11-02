@@ -81,15 +81,15 @@ resource "aws_api_gateway_deployment" "api" {
 
 data "template_file" "stage" {
   depends_on = [
-    aws_api_gateway_deployment.api,
+    aws_api_gateway_deployment.api
   ]
   template = "$${stage}"
 
   vars = {
-    arn = var.stage_name
+    stage = var.stage_name
   }
 }
 
 output "stage" {
-  value = data.template_file.rendered
+  value = data.template_file.stage.rendered
 }
