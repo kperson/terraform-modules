@@ -27,22 +27,18 @@ variable "seconds_until_auto_pause" {
   default = 1800
 }
 
-resource "random_string" "password" {
+resource "random_string" "entropy" {
   length  = 10
   upper   = false
   number  = false
   special = false
 }
 
-data "aws_caller_identity" "current" {}
-
-data "aws_region" "current" {}
-
 resource "aws_rds_cluster" "db" {
   master_username           = "dbuser"
   master_password           = "DEFAULT_PASSWORD"
   database_name             = "${var.database_name}"
-  final_snapshot_identifier = var.final_snapshot_enabled == true ? "${replace(var.database_name, "_", "-")}-final-snapshot" : null
+  final_snapshot_identifier = var.final_snapshot_enabled == true ? "${replace(var.database_name, "_", "-")}-final-snapshot-${random_string.entropy.result}" : null
   skip_final_snapshot       = var.final_snapshot_enabled == false
   deletion_protection       = false
   backup_retention_period   = var.final_snapshot_enabled == true ? 5 : 1
@@ -73,7 +69,7 @@ locals {
   }
 }
 
-resource "null_resource" "password_credentials_file" {
+resource "null_resource" "generate_password" {
 
   provisioner "local-exec" {
 
@@ -84,23 +80,12 @@ resource "null_resource" "password_credentials_file" {
   }
 }
 
-resource "null_resource" "change_password" {
-  depends_on = ["null_resource.password_credentials_file"]
+resource "null_resource" "change_password_enable_http_data_api" {
+  depends_on = ["null_resource.generate_password"]
 
   provisioner "local-exec" {
 
-    command = "${path.module}/setup-password.sh credentials.json /db/data_api/${var.database_name}/${random_string.password.result} ${var.kms_key_arn} ${aws_rds_cluster.db.id} && rm credentials.json"
-
-    environment = {
-    }
-  }
-}
-
-resource "null_resource" "enable_http_endpoint" {
-  depends_on = ["null_resource.change_password"]
-
-  provisioner "local-exec" {
-    command = "aws rds modify-db-cluster --db-cluster-identifier ${aws_rds_cluster.db.id} --apply-immediately --enable-http-endpoint"
+    command = "${path.module}/setup-password.sh credentials.json /db/data_api/${var.database_name}-${random_string.entropy.result} ${var.kms_key_arn} ${aws_rds_cluster.db.id} && rm credentials.json"
 
     environment = {
     }
@@ -119,12 +104,16 @@ output "database_name" {
   value = "${var.database_name}"
 }
 
-output "data_api_secret" {
-  value = "/db/data_api/${var.database_name}/${random_string.password.result}"
+data "aws_secretsmanager_secret" "data_api" {
+  name = "/db/data_api/${var.database_name}-${random_string.entropy.result}"
+}
+
+output "data_api_secret_name" {
+  value = "/db/data_api/${var.database_name}-${random_string.entropy.result}"
 }
 
 output "data_api_secret_arn" {
-  value = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:/db/data_api/${var.database_name}/${random_string.password.result}"
+  value = "${data.aws_secretsmanager_secret.data_api.arn}"
 }
 
 output "cluster_arn" {
