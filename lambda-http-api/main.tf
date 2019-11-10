@@ -26,7 +26,7 @@ variable "api_key_required" {
 }
 
 variable "authorization_scopes" {
-  type    = list(list)
+  type    = list(string)
   default = null
 }
 
