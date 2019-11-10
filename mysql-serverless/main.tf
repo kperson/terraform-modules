@@ -5,15 +5,15 @@
 #https://docs.aws.amazon.com/rdsdataservice/latest/APIReference/API_Operations.html
 
 variable "database_name" {
-  type = "string"
+  type = string
 }
 
 variable "db_subnet_group_name" {
-  type = "string"
+  type = string
 }
 
 variable "kms_key_arn" {
-  type = "string"
+  type = string
 }
 
 variable "vpc_security_group_ids" {
@@ -38,7 +38,8 @@ resource "aws_rds_cluster" "db" {
   master_username           = "dbuser"
   master_password           = "DEFAULT_PASSWORD"
   database_name             = var.database_name
-  final_snapshot_identifier = var.final_snapshot_enabled == true ? "${replace(var.database_name, "_", "-")}-final-snapshot-${random_string.entropy.result}" : null
+
+  final_snapshot_identifier = var.final_snapshot_enabled == true ? format("%s-final-snapshot-%s", replace(var.database_name, "_", "-"), random_string.entropy.result) : null
   skip_final_snapshot       = var.final_snapshot_enabled == false
   deletion_protection       = false
   backup_retention_period   = var.final_snapshot_enabled == true ? 5 : 1
@@ -103,11 +104,11 @@ output "database_name" {
 }
 
 data "aws_secretsmanager_secret" "data_api" {
-  name = "/db/data_api/${var.database_name}-${random_string.entropy.result}"
+  name = format("/db/data_api/%s-%s", var.database_name, random_string.entropy.result)
 }
 
 output "data_api_secret_name" {
-  value = "/db/data_api/${var.database_name}-${random_string.entropy.result}"
+  value =  format("/db/data_api/%s-%s", var.database_name, random_string.entropy.result)   
 }
 
 output "data_api_secret_arn" {

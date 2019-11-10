@@ -1,9 +1,9 @@
 variable "table_arn" {
-  type = "string"
+  type = string
 }
 
 variable "stream_arn" {
-  type    = "string"
+  type    = string
   default = null
 }
 

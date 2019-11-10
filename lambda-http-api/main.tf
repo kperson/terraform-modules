@@ -1,37 +1,37 @@
 variable "lambda_arn" {
-  type = "string"
+  type = string
 }
 
 variable "api_id" {
-  type = "string"
+  type = string
 }
 
 variable "api_root_resource_id" {
-  type = "string"
+  type = string
 }
 
 variable "authorization" {
-  type    = "string"
+  type    = string
   default = "NONE"
 }
 
 variable "authorizer_id" {
-  type    = "string"
+  type    = string
   default = null
 }
 
 variable "api_key_required" {
-  type    = "string"
+  type    = string
   default = null
 }
 
 variable "authorization_scopes" {
-  type    = "list"
+  type    = list(list)
   default = null
 }
 
 variable "stage_name" {
-  type = "string"
+  type = string
   default = null
 }
 
