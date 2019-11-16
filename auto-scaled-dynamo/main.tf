@@ -49,7 +49,7 @@ resource "aws_dynamodb_table" "table" {
   stream_view_type = var.stream_view_type
 
   lifecycle {
-    ignore_changes = ["read_capacity", "write_capacity"]
+    ignore_changes = [read_capacity, write_capacity]
   }
 
 
@@ -100,9 +100,9 @@ resource "aws_appautoscaling_target" "read_target" {
 resource "aws_appautoscaling_policy" "ready_polciy" {
   name               = format("DynamoDBReadCapacityUtilization:%s", aws_appautoscaling_target.read_target.resource_id)
   policy_type        = "TargetTrackingScaling"
-  resource_id        = "${aws_appautoscaling_target.read_target.resource_id}"
-  scalable_dimension = "${aws_appautoscaling_target.read_target.scalable_dimension}"
-  service_namespace  = "${aws_appautoscaling_target.read_target.service_namespace}"
+  resource_id        = aws_appautoscaling_target.read_target.resource_id
+  scalable_dimension = aws_appautoscaling_target.read_target.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.read_target.service_namespace
 
   target_tracking_scaling_policy_configuration {
     predefined_metric_specification {
