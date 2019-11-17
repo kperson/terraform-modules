@@ -12,7 +12,6 @@ resource "aws_iam_role_policy_attachment" "role_attatchment" {
 }
 
 output "name" {
-  type       = string
   depends_on = [aws_iam_role_policy_attachment.role_attatchment]
   value      = var.role
 }

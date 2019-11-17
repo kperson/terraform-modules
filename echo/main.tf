@@ -7,7 +7,6 @@ variable "out" {
 }
 
 output "out" {
-  type  = string
   value = var.out
 }
 
