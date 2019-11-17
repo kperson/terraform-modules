@@ -79,17 +79,7 @@ resource "aws_api_gateway_deployment" "api" {
   stage_name  = var.stage_name
 }
 
-
-data "template_file" "stage" {
-  depends_on = [
-    aws_api_gateway_deployment.api
-  ]
-  template = var.stage_name
-
-  vars = {
-  }
-}
-
 output "stage" {
-  value = data.template_file.stage.rendered
+  depends_on = [aws_api_gateway_deployment.api]
+  value = var.stage_name
 }
