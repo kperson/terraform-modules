@@ -88,7 +88,7 @@ resource "aws_dynamodb_table" "table" {
   stream_view_type = var.stream_view_type
 
   lifecycle {
-    ignore_changes = [read_capacity, write_capacity, global_secondary_index, local_secondary_index]
+    ignore_changes = [read_capacity, write_capacity, global_secondary_index]
   }
 
 
