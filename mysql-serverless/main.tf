@@ -35,9 +35,9 @@ resource "random_string" "entropy" {
 }
 
 resource "aws_rds_cluster" "db" {
-  master_username           = "dbuser"
-  master_password           = "DEFAULT_PASSWORD"
-  database_name             = var.database_name
+  master_username = "dbuser"
+  master_password = "DEFAULT_PASSWORD"
+  database_name   = var.database_name
 
   final_snapshot_identifier = var.final_snapshot_enabled == true ? format("%s-final-snapshot-%s", replace(var.database_name, "_", "-"), random_string.entropy.result) : null
   skip_final_snapshot       = var.final_snapshot_enabled == false
@@ -59,29 +59,32 @@ resource "aws_rds_cluster" "db" {
   }
 }
 
-locals {
-  data_api = {
-    username            = "dbuser"
-    password            = "MY_PASSWORD_TEMPLATE"
-    engine              = "aurora" //mysql
-    host                = aws_rds_cluster.db.endpoint
-    port                = 3306
-    dbClusterIdentifier = aws_rds_cluster.db.cluster_identifier
-  }
-}
+
 
 resource "null_resource" "generate_password" {
-
+  triggers = {
+    cluster_identifier = aws_rds_cluster.db.cluster_identifier
+  }
   provisioner "local-exec" {
 
-    command = format("echo '%s' > credentials.json", jsonencode(local.data_api))
+    command = format("echo '%s' > credentials.json", jsonencode({
+      username            = "dbuser"
+      password            = "MY_PASSWORD_TEMPLATE"
+      engine              = "aurora" //mysql
+      host                = aws_rds_cluster.db.endpoint
+      port                = 3306
+      dbClusterIdentifier = aws_rds_cluster.db.cluster_identifier
+    }))
     environment = {
     }
   }
 }
 
 resource "null_resource" "change_password_enable_http_data_api" {
-  depends_on = ["null_resource.generate_password"]
+  triggers = {
+    cluster_identifier = aws_rds_cluster.db.cluster_identifier
+  }
+  depends_on = [null_resource.generate_password]
 
   provisioner "local-exec" {
 
@@ -104,11 +107,14 @@ output "database_name" {
 }
 
 data "aws_secretsmanager_secret" "data_api" {
-  name = format("/db/data_api/%s-%s", var.database_name, random_string.entropy.result)
+  depends_on = [null_resource.change_password_enable_http_data_api]
+  name       = format("/db/data_api/%s-%s", var.database_name, random_string.entropy.result)
 }
 
 output "data_api_secret_name" {
-  value =  format("/db/data_api/%s-%s", var.database_name, random_string.entropy.result)   
+  depends_on = [null_resource.change_password_enable_http_data_api]
+
+  value = format("/db/data_api/%s-%s", var.database_name, random_string.entropy.result)
 }
 
 output "data_api_secret_arn" {

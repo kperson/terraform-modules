@@ -22,14 +22,31 @@ variable "ttl_attribute" {
   default = null
 }
 
+variable "global_secondary_indices" {
+  type = list(object({
+    name = string
+    hash_key = string
+    range_key = string
+  }))
+  default = []
+}
+
+variable "local_secondary_indices" {
+  type = list(object({
+    name = string
+    range_key = string
+  }))
+  default = []
+}
+
 variable "max_capacity" {
   default = 3000
 }
 
 resource "aws_dynamodb_table" "table" {
   name           = var.table_name
-  read_capacity  = 2
-  write_capacity = 2
+  read_capacity  = 1
+  write_capacity = 1
   hash_key       = var.hash_key
   range_key      = var.range_key
 
@@ -38,6 +55,28 @@ resource "aws_dynamodb_table" "table" {
     content {
       name = attribute.value.name
       type = attribute.value.type
+    }
+  }
+  
+
+  dynamic "global_secondary_index" {
+    for_each = var.global_secondary_indices
+    content {
+      name            = global_secondary_index.value.name
+      hash_key        = global_secondary_index.value.hash_key
+      range_key       = global_secondary_index.value.range_key
+      read_capacity   = 1
+      write_capacity  = 1
+      projection_type = "ALL"
+    }
+  }
+
+  dynamic "local_secondary_index" {
+    for_each = var.local_secondary_indices
+    content {
+      name            = local_secondary_index.value.name
+      range_key       = local_secondary_index.value.range_key
+      projection_type = "ALL"
     }
   }
 
@@ -49,7 +88,7 @@ resource "aws_dynamodb_table" "table" {
   stream_view_type = var.stream_view_type
 
   lifecycle {
-    ignore_changes = [read_capacity, write_capacity]
+    ignore_changes = [read_capacity, write_capacity, global_secondary_index, local_secondary_index]
   }
 
 
@@ -57,7 +96,7 @@ resource "aws_dynamodb_table" "table" {
     for_each = var.ttl_attribute == null ? [] : list(var.ttl_attribute)
     content {
       attribute_name = ttl.value.name
-      enabled = true
+      enabled        = true
     }
   }
 }
@@ -91,7 +130,7 @@ data "aws_iam_policy_document" "scale_policy_doc" {
 
 resource "aws_appautoscaling_target" "read_target" {
   max_capacity       = var.max_capacity
-  min_capacity       = 2
+  min_capacity       = 1
   resource_id        = format("table/%s", aws_dynamodb_table.table.id)
   scalable_dimension = "dynamodb:table:ReadCapacityUnits"
   service_namespace  = "dynamodb"
@@ -117,7 +156,7 @@ resource "aws_appautoscaling_policy" "ready_polciy" {
 
 resource "aws_appautoscaling_target" "write_target" {
   max_capacity       = var.max_capacity
-  min_capacity       = 2
+  min_capacity       = 1
   resource_id        = format("table/%s", aws_dynamodb_table.table.id)
   scalable_dimension = "dynamodb:table:WriteCapacityUnits"
   service_namespace  = "dynamodb"
@@ -135,6 +174,62 @@ resource "aws_appautoscaling_policy" "write_policy" {
       predefined_metric_type = "DynamoDBWriteCapacityUtilization"
     }
 
+    target_value       = 70
+    scale_in_cooldown  = 60
+    scale_out_cooldown = 60
+  }
+}
+
+resource "aws_appautoscaling_target" "dynamodb_index_read_target" {
+  count = length(var.global_secondary_indices)
+  max_capacity = var.max_capacity
+  min_capacity = 1
+  resource_id = format("table/%s/index/%s", aws_dynamodb_table.table.id, var.global_secondary_indices[count.index].name)
+  scalable_dimension = "dynamodb:index:ReadCapacityUnits"
+  service_namespace = "dynamodb"
+}
+
+resource "aws_appautoscaling_policy" "dynamodb_index_read_policy" {
+  depends_on = [aws_appautoscaling_target.dynamodb_index_read_target]
+  count = length(var.global_secondary_indices)
+  name = format("DynamoDBReadCapacityUtilization:Index_%s", var.global_secondary_indices[count.index].name)
+  policy_type = "TargetTrackingScaling"
+  resource_id = format("table/%s/index/%s", aws_dynamodb_table.table.id, var.global_secondary_indices[count.index].name)
+  scalable_dimension = "dynamodb:index:ReadCapacityUnits"
+  service_namespace = "dynamodb"
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "DynamoDBReadCapacityUtilization"
+    }
+    target_value       = 70
+    scale_in_cooldown  = 60
+    scale_out_cooldown = 60
+  }
+}
+
+resource "aws_appautoscaling_target" "dynamodb_index_write_target" {
+  count = length(var.global_secondary_indices)
+  max_capacity = var.max_capacity
+  min_capacity = 1
+  resource_id = format("table/%s/index/%s", aws_dynamodb_table.table.id, var.global_secondary_indices[count.index].name)
+  scalable_dimension = "dynamodb:index:WriteCapacityUnits"
+  service_namespace = "dynamodb"
+}
+
+resource "aws_appautoscaling_policy" "dynamodb_index_write_policy" {
+  depends_on = [aws_appautoscaling_target.dynamodb_index_write_target]
+  count = length(var.global_secondary_indices)
+  name = format("DynamoDBReadCapacityUtilization:Index_%s", var.global_secondary_indices[count.index].name)
+  policy_type = "TargetTrackingScaling"
+  resource_id = format("table/%s/index/%s", aws_dynamodb_table.table.id, var.global_secondary_indices[count.index].name)
+  scalable_dimension = "dynamodb:index:WriteCapacityUnits"
+  service_namespace = "dynamodb"
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "DynamoDBWriteCapacityUtilization"
+    }
     target_value       = 70
     scale_in_cooldown  = 60
     scale_out_cooldown = 60
