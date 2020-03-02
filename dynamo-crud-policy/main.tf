@@ -50,7 +50,8 @@ data "aws_iam_policy_document" "document" {
     ]
 
     resources = [
-      var.table_arn
+      var.table_arn,
+      format("%s/index/*", var.table_arn)
     ]
   }
 }
