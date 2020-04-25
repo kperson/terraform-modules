@@ -147,9 +147,9 @@ resource "aws_appautoscaling_policy" "ready_polciy" {
 
   name               = format("DynamoDBReadCapacityUtilization:%s", aws_appautoscaling_target.read_target.resource_id)
   policy_type        = "TargetTrackingScaling"
-  resource_id        = aws_appautoscaling_target.read_target.resource_id
-  scalable_dimension = aws_appautoscaling_target.read_target.scalable_dimension
-  service_namespace  = aws_appautoscaling_target.read_target.service_namespace
+  resource_id        = aws_appautoscaling_target.read_target[0].resource_id
+  scalable_dimension = aws_appautoscaling_target.read_target[0].scalable_dimension
+  service_namespace  = aws_appautoscaling_target.read_target[0].service_namespace
 
   target_tracking_scaling_policy_configuration {
     predefined_metric_specification {
@@ -177,9 +177,9 @@ resource "aws_appautoscaling_policy" "write_policy" {
 
   name               = format("DynamoDBWriteCapacityUtilization:%s", aws_appautoscaling_target.write_target.resource_id)
   policy_type        = "TargetTrackingScaling"
-  resource_id        = aws_appautoscaling_target.write_target.resource_id
-  scalable_dimension = aws_appautoscaling_target.write_target.scalable_dimension
-  service_namespace  = aws_appautoscaling_target.write_target.service_namespace
+  resource_id        = aws_appautoscaling_target.write_target[0].resource_id
+  scalable_dimension = aws_appautoscaling_target.write_target[0].scalable_dimension
+  service_namespace  = aws_appautoscaling_target.write_target[0].service_namespace
 
   target_tracking_scaling_policy_configuration {
     predefined_metric_specification {
