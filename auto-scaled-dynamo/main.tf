@@ -145,7 +145,7 @@ resource "aws_appautoscaling_target" "read_target" {
 resource "aws_appautoscaling_policy" "ready_polciy" {
   count = var.billing_mode == "PROVISIONED" ? 1 : 0
 
-  name               = format("DynamoDBReadCapacityUtilization:%s", aws_appautoscaling_target.read_target.resource_id)
+  name               = format("DynamoDBReadCapacityUtilization:%s", aws_appautoscaling_target.read_target[0].resource_id)
   policy_type        = "TargetTrackingScaling"
   resource_id        = aws_appautoscaling_target.read_target[0].resource_id
   scalable_dimension = aws_appautoscaling_target.read_target[0].scalable_dimension
@@ -175,7 +175,7 @@ resource "aws_appautoscaling_target" "write_target" {
 resource "aws_appautoscaling_policy" "write_policy" {
   count = var.billing_mode == "PROVISIONED" ? 1 : 0
 
-  name               = format("DynamoDBWriteCapacityUtilization:%s", aws_appautoscaling_target.write_target.resource_id)
+  name               = format("DynamoDBWriteCapacityUtilization:%s", aws_appautoscaling_target.write_target[0].resource_id)
   policy_type        = "TargetTrackingScaling"
   resource_id        = aws_appautoscaling_target.write_target[0].resource_id
   scalable_dimension = aws_appautoscaling_target.write_target[0].scalable_dimension
