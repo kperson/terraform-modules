@@ -22,10 +22,14 @@ variable "ttl_attribute" {
   default = null
 }
 
+variable "billing_mode" {
+  default = "PROVISIONED"
+}
+
 variable "global_secondary_indices" {
   type = list(object({
-    name = string
-    hash_key = string
+    name      = string
+    hash_key  = string
     range_key = string
   }))
   default = []
@@ -33,7 +37,7 @@ variable "global_secondary_indices" {
 
 variable "local_secondary_indices" {
   type = list(object({
-    name = string
+    name      = string
     range_key = string
   }))
   default = []
@@ -45,6 +49,7 @@ variable "max_capacity" {
 
 resource "aws_dynamodb_table" "table" {
   name           = var.table_name
+  billing_mode   = var.billing_mode
   read_capacity  = 1
   write_capacity = 1
   hash_key       = var.hash_key
@@ -57,7 +62,7 @@ resource "aws_dynamodb_table" "table" {
       type = attribute.value.type
     }
   }
-  
+
 
   dynamic "global_secondary_index" {
     for_each = var.global_secondary_indices
@@ -129,6 +134,7 @@ data "aws_iam_policy_document" "scale_policy_doc" {
 }
 
 resource "aws_appautoscaling_target" "read_target" {
+  count              = var.billing_mode == "PROVISIONED" ? 1 : 0
   max_capacity       = var.max_capacity
   min_capacity       = 1
   resource_id        = format("table/%s", aws_dynamodb_table.table.id)
@@ -137,6 +143,8 @@ resource "aws_appautoscaling_target" "read_target" {
 }
 
 resource "aws_appautoscaling_policy" "ready_polciy" {
+  count = var.billing_mode == "PROVISIONED" ? 1 : 0
+
   name               = format("DynamoDBReadCapacityUtilization:%s", aws_appautoscaling_target.read_target.resource_id)
   policy_type        = "TargetTrackingScaling"
   resource_id        = aws_appautoscaling_target.read_target.resource_id
@@ -155,6 +163,8 @@ resource "aws_appautoscaling_policy" "ready_polciy" {
 }
 
 resource "aws_appautoscaling_target" "write_target" {
+  count = var.billing_mode == "PROVISIONED" ? 1 : 0
+
   max_capacity       = var.max_capacity
   min_capacity       = 1
   resource_id        = format("table/%s", aws_dynamodb_table.table.id)
@@ -163,6 +173,8 @@ resource "aws_appautoscaling_target" "write_target" {
 }
 
 resource "aws_appautoscaling_policy" "write_policy" {
+  count = var.billing_mode == "PROVISIONED" ? 1 : 0
+
   name               = format("DynamoDBWriteCapacityUtilization:%s", aws_appautoscaling_target.write_target.resource_id)
   policy_type        = "TargetTrackingScaling"
   resource_id        = aws_appautoscaling_target.write_target.resource_id
@@ -181,22 +193,23 @@ resource "aws_appautoscaling_policy" "write_policy" {
 }
 
 resource "aws_appautoscaling_target" "dynamodb_index_read_target" {
-  count = length(var.global_secondary_indices)
-  max_capacity = var.max_capacity
-  min_capacity = 1
-  resource_id = format("table/%s/index/%s", aws_dynamodb_table.table.id, var.global_secondary_indices[count.index].name)
+
+  count              = var.billing_mode == "PROVISIONED" ? length(var.global_secondary_indices) : 0
+  max_capacity       = var.max_capacity
+  min_capacity       = 1
+  resource_id        = format("table/%s/index/%s", aws_dynamodb_table.table.id, var.global_secondary_indices[count.index].name)
   scalable_dimension = "dynamodb:index:ReadCapacityUnits"
-  service_namespace = "dynamodb"
+  service_namespace  = "dynamodb"
 }
 
 resource "aws_appautoscaling_policy" "dynamodb_index_read_policy" {
-  depends_on = [aws_appautoscaling_target.dynamodb_index_read_target]
-  count = length(var.global_secondary_indices)
-  name = format("DynamoDBReadCapacityUtilization:Index_%s", var.global_secondary_indices[count.index].name)
-  policy_type = "TargetTrackingScaling"
-  resource_id = format("table/%s/index/%s", aws_dynamodb_table.table.id, var.global_secondary_indices[count.index].name)
+  depends_on         = [aws_appautoscaling_target.dynamodb_index_read_target]
+  count              = var.billing_mode == "PROVISIONED" ? length(var.global_secondary_indices) : 0
+  name               = format("DynamoDBReadCapacityUtilization:Index_%s", var.global_secondary_indices[count.index].name)
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = format("table/%s/index/%s", aws_dynamodb_table.table.id, var.global_secondary_indices[count.index].name)
   scalable_dimension = "dynamodb:index:ReadCapacityUnits"
-  service_namespace = "dynamodb"
+  service_namespace  = "dynamodb"
 
   target_tracking_scaling_policy_configuration {
     predefined_metric_specification {
@@ -209,22 +222,22 @@ resource "aws_appautoscaling_policy" "dynamodb_index_read_policy" {
 }
 
 resource "aws_appautoscaling_target" "dynamodb_index_write_target" {
-  count = length(var.global_secondary_indices)
-  max_capacity = var.max_capacity
-  min_capacity = 1
-  resource_id = format("table/%s/index/%s", aws_dynamodb_table.table.id, var.global_secondary_indices[count.index].name)
+  count              = var.billing_mode == "PROVISIONED" ? length(var.global_secondary_indices) : 0
+  max_capacity       = var.max_capacity
+  min_capacity       = 1
+  resource_id        = format("table/%s/index/%s", aws_dynamodb_table.table.id, var.global_secondary_indices[count.index].name)
   scalable_dimension = "dynamodb:index:WriteCapacityUnits"
-  service_namespace = "dynamodb"
+  service_namespace  = "dynamodb"
 }
 
 resource "aws_appautoscaling_policy" "dynamodb_index_write_policy" {
-  depends_on = [aws_appautoscaling_target.dynamodb_index_write_target]
-  count = length(var.global_secondary_indices)
-  name = format("DynamoDBReadCapacityUtilization:Index_%s", var.global_secondary_indices[count.index].name)
-  policy_type = "TargetTrackingScaling"
-  resource_id = format("table/%s/index/%s", aws_dynamodb_table.table.id, var.global_secondary_indices[count.index].name)
+  depends_on         = [aws_appautoscaling_target.dynamodb_index_write_target]
+  count              = var.billing_mode == "PROVISIONED" ? length(var.global_secondary_indices) : 0
+  name               = format("DynamoDBReadCapacityUtilization:Index_%s", var.global_secondary_indices[count.index].name)
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = format("table/%s/index/%s", aws_dynamodb_table.table.id, var.global_secondary_indices[count.index].name)
   scalable_dimension = "dynamodb:index:WriteCapacityUnits"
-  service_namespace = "dynamodb"
+  service_namespace  = "dynamodb"
 
   target_tracking_scaling_policy_configuration {
     predefined_metric_specification {
