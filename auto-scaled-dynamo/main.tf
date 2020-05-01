@@ -47,6 +47,10 @@ variable "max_capacity" {
   default = 3000
 }
 
+variable "min_capacity" {
+  default = 1
+}
+
 resource "aws_dynamodb_table" "table" {
   name           = var.table_name
   billing_mode   = var.billing_mode
@@ -136,7 +140,7 @@ data "aws_iam_policy_document" "scale_policy_doc" {
 resource "aws_appautoscaling_target" "read_target" {
   count              = var.billing_mode == "PROVISIONED" ? 1 : 0
   max_capacity       = var.max_capacity
-  min_capacity       = 1
+  min_capacity       = var.min_capacity
   resource_id        = format("table/%s", aws_dynamodb_table.table.id)
   scalable_dimension = "dynamodb:table:ReadCapacityUnits"
   service_namespace  = "dynamodb"
@@ -166,7 +170,7 @@ resource "aws_appautoscaling_target" "write_target" {
   count = var.billing_mode == "PROVISIONED" ? 1 : 0
 
   max_capacity       = var.max_capacity
-  min_capacity       = 1
+  min_capacity       = var.min_capacity
   resource_id        = format("table/%s", aws_dynamodb_table.table.id)
   scalable_dimension = "dynamodb:table:WriteCapacityUnits"
   service_namespace  = "dynamodb"
@@ -196,7 +200,7 @@ resource "aws_appautoscaling_target" "dynamodb_index_read_target" {
 
   count              = var.billing_mode == "PROVISIONED" ? length(var.global_secondary_indices) : 0
   max_capacity       = var.max_capacity
-  min_capacity       = 1
+  min_capacity       = var.min_capacity
   resource_id        = format("table/%s/index/%s", aws_dynamodb_table.table.id, var.global_secondary_indices[count.index].name)
   scalable_dimension = "dynamodb:index:ReadCapacityUnits"
   service_namespace  = "dynamodb"
@@ -224,7 +228,7 @@ resource "aws_appautoscaling_policy" "dynamodb_index_read_policy" {
 resource "aws_appautoscaling_target" "dynamodb_index_write_target" {
   count              = var.billing_mode == "PROVISIONED" ? length(var.global_secondary_indices) : 0
   max_capacity       = var.max_capacity
-  min_capacity       = 1
+  min_capacity       = var.min_capacity
   resource_id        = format("table/%s/index/%s", aws_dynamodb_table.table.id, var.global_secondary_indices[count.index].name)
   scalable_dimension = "dynamodb:index:WriteCapacityUnits"
   service_namespace  = "dynamodb"
