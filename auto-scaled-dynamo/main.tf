@@ -26,6 +26,11 @@ variable "billing_mode" {
   default = "PROVISIONED"
 }
 
+variable "point_in_time_recovery_enabled" {
+  type = bool
+  default = false
+}
+
 variable "global_secondary_indices" {
   type = list(object({
     name      = string
@@ -98,6 +103,10 @@ resource "aws_dynamodb_table" "table" {
 
   lifecycle {
     ignore_changes = [read_capacity, write_capacity]
+  }
+
+  point_in_time_recovery {
+    enabled = var.point_in_time_recovery_enabled
   }
 
 
