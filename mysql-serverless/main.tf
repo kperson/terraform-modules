@@ -34,6 +34,18 @@ resource "random_string" "entropy" {
   special = false
 }
 
+variable "engine" {
+  default = "aurora-mysql"
+}
+
+ variable "engine_mode" {
+  default = "serverless"
+}
+
+variable "engine_version" {
+  default = "5.7.mysql_aurora.2.07.1"
+}
+
 resource "aws_rds_cluster" "db" {
   master_username = "dbuser"
   master_password = "DEFAULT_PASSWORD"
@@ -47,8 +59,10 @@ resource "aws_rds_cluster" "db" {
   kms_key_id                = var.kms_key_arn
   storage_encrypted         = true
   vpc_security_group_ids    = var.vpc_security_group_ids
-  engine                    = "aurora"
-  engine_mode               = "serverless"
+  engine                    = var.engine
+  engine_mode               = var.engine_mode
+  engine_version            = var.engine_version
+  enable_http_endpoint      = true
 
   scaling_configuration {
     auto_pause               = true
