@@ -8,6 +8,10 @@ variable "database_name" {
   type = string
 }
 
+variable "cluster_identifier" {
+  type = string
+}
+
 variable "db_subnet_group_name" {
   type = string
 }
@@ -34,11 +38,12 @@ resource "random_string" "entropy" {
   special = false
 }
 
+
 variable "engine" {
   default = "aurora-mysql"
 }
 
- variable "engine_mode" {
+variable "engine_mode" {
   default = "serverless"
 }
 
@@ -47,9 +52,11 @@ variable "engine_version" {
 }
 
 resource "aws_rds_cluster" "db" {
-  master_username = "dbuser"
-  master_password = "DEFAULT_PASSWORD"
-  database_name   = var.database_name
+
+  master_username    = "dbuser"
+  master_password    = "DEFAULT_PASSWORD"
+  database_name      = var.database_name
+  cluster_identifier = var.cluster_identifier
 
   final_snapshot_identifier = var.final_snapshot_enabled == true ? format("%s-final-snapshot-%s", replace(var.database_name, "_", "-"), random_string.entropy.result) : null
   skip_final_snapshot       = var.final_snapshot_enabled == false
@@ -84,7 +91,7 @@ resource "null_resource" "generate_password" {
     command = format("echo '%s' > credentials.json", jsonencode({
       username            = "dbuser"
       password            = "MY_PASSWORD_TEMPLATE"
-      engine              = "aurora" //mysql
+      engine              = var.engine
       host                = aws_rds_cluster.db.endpoint
       port                = 3306
       dbClusterIdentifier = aws_rds_cluster.db.cluster_identifier
