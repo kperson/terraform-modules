@@ -32,19 +32,19 @@ variable "point_in_time_recovery_enabled" {
 }
 
 variable "global_secondary_indices" {
-  type = tolist([object({
+  type = list(object({
     name      = string
     hash_key  = string
     range_key = string
-  })])
+  }))
   default = []
 }
 
 variable "local_secondary_indices" {
-  type = tolist([object({
+  type = list(object({
     name      = string
     range_key = string
-  })])
+  }))
   default = []
 }
 
