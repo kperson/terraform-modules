@@ -32,19 +32,19 @@ variable "point_in_time_recovery_enabled" {
 }
 
 variable "global_secondary_indices" {
-  type = list(object({
+  type = [object({
     name      = string
     hash_key  = string
     range_key = string
-  }))
+  })]
   default = []
 }
 
 variable "local_secondary_indices" {
-  type = list(object({
+  type = [object({
     name      = string
     range_key = string
-  }))
+  })]
   default = []
 }
 
@@ -111,7 +111,7 @@ resource "aws_dynamodb_table" "table" {
 
 
   dynamic "ttl" {
-    for_each = var.ttl_attribute == null ? [] : list(var.ttl_attribute)
+    for_each = var.ttl_attribute == null ? [] : [var.ttl_attribute]
     content {
       attribute_name = ttl.value.name
       enabled        = true

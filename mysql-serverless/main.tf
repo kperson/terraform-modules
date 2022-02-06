@@ -51,6 +51,14 @@ variable "engine_version" {
   default = "5.7.mysql_aurora.2.07.1"
 }
 
+variable "min_capacity" {
+  default = 1
+}
+
+variable "max_capacity" {
+  default = 256
+}
+
 resource "aws_rds_cluster" "db" {
 
   master_username    = "dbuser"
@@ -73,8 +81,8 @@ resource "aws_rds_cluster" "db" {
 
   scaling_configuration {
     auto_pause               = true
-    max_capacity             = 256
-    min_capacity             = 2
+    max_capacity             = var.max_capacity
+    min_capacity             = var.min_capacity
     seconds_until_auto_pause = var.seconds_until_auto_pause
     timeout_action           = "ForceApplyCapacityChange"
   }
